@@ -1,0 +1,96 @@
+---
+title: "Motor Trend analysis"
+author: "Izaak Jephson"
+date: "17/03/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Executive Summary
+
+```{r import}
+library("tidyverse")
+library("ggplot2")
+library("knitr")
+```
+
+# Data used
+
+The data used here comes from the "mtcars" data included as one of the data sets in the "datasets" package in R. The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models). The variables of interest in this analysis are "mpg" containing the miles per (US) gallon and am which contatins the transmission mode for the vehicle (0 = automatic, 1 = manual)
+
+# Exploratory data analysis
+
+```{r data}
+data(mtcars)
+
+mtcars %>%
+        ggplot(aes(x = factor(am),
+                   y = mpg,
+                   fill = factor(am))) +
+        geom_violin() +
+        theme_minimal() +
+        labs(title = "Violin plot of mpg split by\nmanual vs automatic transmission",
+             x = "transmission",
+             y = "miles per gallon") +
+        scale_fill_discrete(name = "transmission",
+                            labels = c("automatic", "manual")) +
+        theme(
+                axis.title.x = element_blank(),
+                axis.text.x = element_blank(),
+                axis.ticks.x = element_blank()
+        )
+```
+
+First we simply plot the data. From the plot above, there does seem to be a difference in mpg for automatic and manual transmission. Automatic transmission vehicles have a mean mpg of `r CarData %>% filter(am == 0) %>% pull(mpg) %>% mean() %>% round(digits = 1)`, while manual vehicles have a mean mpg of `r CarData %>% filter(am == 1) %>% pull(mpg) %>% mean() %>% round(digits = 1)`. The variance of mpg for the manual transmission vehicles is larger at `r CarData %>% filter(am == 1) %>% pull(mpg) %>% var() %>% round(digits = 1)`, compared to `r CarData %>% filter(am == 0) %>% pull(mpg) %>% var() %>% round(digits = 1)` for the automatic transmission vehicles. This is summarized below:
+
+```{r summary}
+mtcars %>%
+        group_by(am) %>%
+        summarise(
+                mean = mean(mpg) %>% round(digits = 1),
+                variance = var(mpg) %>% round(digits = 1)
+        ) %>%
+        mutate(am = case_when(am == 0 ~ "automatic",
+                              am == 1 ~ "manual")) %>%
+        rename(transmission = am) %>% 
+  kable(caption = "Mean and variance of mpg by mode of transmission")
+```
+
+We can test to see if this difference is significant:
+
+```{r tests}
+t.test(mpg ~ am, data = mtcars)
+```
+
+The 95% confidence interval for the difference in the means of mpg for the two transmission modes is `r t.test(mpg ~ am, data = CarData)$conf.int[1] %>% round(digits = 1)` to `r t.test(mpg ~ am, data = CarData)$conf.int[2] %>% round(digits = 1)`. This does not include zero, therefore, we can reject the null hypothesis that there is no difference between the two modes of transmission at the 95% confidence level. Alternatively we could use the p value of `r t.test(mpg ~ am, data = CarData)$p.value %>% round(digits = 4)` and conclude that we have eveidence for a difference in mpg for the two groups atthe 95% confidence level as the p value is below 0.05.
+
+# Regression
+                                                                                                                                    Now that we have established that there is a difference between the two modes of transmission, we can attempt to quantify this difference using regeression. We can start by fitting a simple linear model to the data. For ease of fitting, we will use transmission as the binary variable to predict, and mpg as the independent continuous variable. However, it should be noted that this is not to say that the causation runs in this direction, i.e. it is not that having a higher mpg that *causes* the transmission to be manual. We can interpret the predicted transmission on a continuous scale as a probability of the car being manual transmission for a given mpg. 
+                                                                                                                                    
+```{r}
+fit1 <- glm(am ~ mpg, data = mtcars)
+
+mtcars %>%
+  ggplot(aes(y = am,
+             x = mpg,
+             colour = am)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Plot of transmission by mpg",
+       y = "transmission",
+       x = "miles per gallon") +
+  scale_colour_continuous(name = "transmission",
+                          labels = c("automatic", "manual")) +
+  # theme(
+  #         axis.title.x = element_blank(),
+  #         axis.text.x = element_blank(),
+  #         axis.ticks.x = element_blank()
+  # ) +
+  geom_abline(slope = fit1$coefficients[2],
+              intercept = fit1$coefficients[1])
+
+```
+
