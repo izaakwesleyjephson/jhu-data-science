@@ -8,6 +8,7 @@ output: pdf_document
 \selectfont
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=5, fig.height=3.5) 
 ```
 
 ```{r import, include=FALSE}
@@ -144,13 +145,13 @@ ggplot(linear_model) +
 
 ## Diagnostic plots for multivariate models 1,2,3,4
 
-```{r}
+```{r, fig.width=8, fig.height=6}
 
 par(mfrow = c(2,2))
-plot(model_1)
-plot(model_2)
-plot(model_3)
-plot(model_4)
+plot(model_1$fitted, model_1$residuals)
+plot(model_2$fitted, model_2$residuals)
+plot(model_3$fitted, model_3$residuals)
+plot(model_4$fitted, model_4$residuals)
 
 ```
 
